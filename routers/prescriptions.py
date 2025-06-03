@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -23,10 +24,78 @@ def create_prescription(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    # Prescription agora está associada a um senior, não user_id
-    raise HTTPException(
-        status_code=400, detail="Prescription must be associated to a senior, not user."
+    # Verifica se o senior existe
+    from models.senior import Senior
+
+    senior = db.query(Senior).filter(Senior.id == prescription.senior_id).first()
+    if not senior:
+        raise HTTPException(status_code=404, detail="Senior not found.")
+    # Verifica se o medicamento existe
+    from models.medication import Medication
+
+    medication = (
+        db.query(Medication).filter(Medication.id == prescription.medication_id).first()
     )
+    if not medication:
+        raise HTTPException(status_code=404, detail="Medication not found.")
+    # Verifica se o doctor existe e tem role 'doctor'
+    from models.user import User as UserModel
+
+    doctor = db.query(UserModel).filter(UserModel.id == prescription.doctor_id).first()
+    if not doctor or doctor.role != "doctor":
+        raise HTTPException(status_code=404, detail="Doctor not found or not a doctor.")
+    # Converte datas ISO string para datetime
+    try:
+        start_date = (
+            prescription.start_date
+            if isinstance(prescription.start_date, datetime)
+            else datetime.fromisoformat(prescription.start_date)
+        )
+        end_date = (
+            prescription.end_date
+            if isinstance(prescription.end_date, datetime)
+            else datetime.fromisoformat(prescription.end_date)
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=400, detail="Invalid date format. Use ISO 8601."
+        )
+    db_prescription = Prescription(
+        senior_id=prescription.senior_id,
+        medication_id=prescription.medication_id,
+        doctor_id=prescription.doctor_id,
+        dosage=prescription.dosage,
+        frequency=prescription.frequency,
+        start_date=start_date,
+        end_date=end_date,
+        description=prescription.description,
+    )
+    db.add(db_prescription)
+    db.commit()
+    db.refresh(db_prescription)
+    # Monta resposta com medication e doctor
+    med = (
+        db.query(Medication)
+        .filter(Medication.id == db_prescription.medication_id)
+        .first()
+    )
+    medication_data = None
+    if med:
+        medication_data = {
+            "id": med.id,
+            "name": med.name,
+            "description": med.description,
+        }
+    doctor = db.query(User).filter(User.id == db_prescription.doctor_id).first()
+    doctor_data = None
+    if doctor:
+        doctor_data = {"id": doctor.id, "name": doctor.name}
+    presc_data = {
+        **db_prescription.__dict__,
+        "medication": medication_data,
+        "doctor": doctor_data,
+    }
+    return PrescriptionRead(**presc_data)
 
 
 @router.get(
@@ -35,19 +104,28 @@ def create_prescription(
 def list_prescriptions(
     db: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
-    # Buscar todos os seniors do usuário
-    from models.usersenior import UserSenior
-
-    senior_ids = [
-        us.senior_id
-        for us in db.query(UserSenior)
-        .filter(UserSenior.user_id == current_user.id)
-        .all()
-    ]
-    prescriptions = (
-        db.query(Prescription).filter(Prescription.senior_id.in_(senior_ids)).all()
-    )
-    return prescriptions
+    prescriptions = db.query(Prescription).all()
+    result = []
+    for presc in prescriptions:
+        med = db.query(Medication).filter(Medication.id == presc.medication_id).first()
+        medication_data = None
+        if med:
+            medication_data = {
+                "id": med.id,
+                "name": med.name,
+                "description": med.description,
+            }
+        doctor = db.query(User).filter(User.id == presc.doctor_id).first()
+        doctor_data = None
+        if doctor:
+            doctor_data = {"id": doctor.id, "name": doctor.name}
+        presc_data = {
+            **presc.__dict__,
+            "medication": medication_data,
+            "doctor": doctor_data,
+        }
+        result.append(PrescriptionRead(**presc_data))
+    return result
 
 
 @router.get(
@@ -147,9 +225,27 @@ def get_valid_prescriptions_by_device(
 
 @router.get("/by_senior/{senior_id}", dependencies=[Depends(get_current_user)])
 def get_prescriptions_by_senior(senior_id: str, db: Session = Depends(get_session)):
-    from models.prescription import Prescription
-
     prescriptions = (
         db.query(Prescription).filter(Prescription.senior_id == senior_id).all()
     )
-    return prescriptions
+    result = []
+    for presc in prescriptions:
+        med = db.query(Medication).filter(Medication.id == presc.medication_id).first()
+        medication_data = None
+        if med:
+            medication_data = {
+                "id": med.id,
+                "name": med.name,
+                "description": med.description,
+            }
+        doctor = db.query(User).filter(User.id == presc.doctor_id).first()
+        doctor_data = None
+        if doctor:
+            doctor_data = {"id": doctor.id, "name": doctor.name}
+        presc_data = {
+            **presc.__dict__,
+            "medication": medication_data,
+            "doctor": doctor_data,
+        }
+        result.append(PrescriptionRead(**presc_data))
+    return result
