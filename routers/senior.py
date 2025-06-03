@@ -161,3 +161,58 @@ def delete_senior(senior_id: str, db: Session = Depends(get_session)):
     db.delete(senior)
     db.commit()
     return
+
+
+@router.get(
+    "/by_user/{user_id}",
+    response_model=List[SeniorRead],
+    dependencies=[Depends(get_current_user)],
+)
+def get_seniors_by_user(user_id: str, db: Session = Depends(get_session)):
+    user_senior_relations = (
+        db.query(UserSenior).filter(UserSenior.user_id == user_id).all()
+    )
+    senior_ids = [rel.senior_id for rel in user_senior_relations]
+    seniors = db.query(Senior).filter(Senior.id.in_(senior_ids)).all()
+    # Adiciona o device_id em cada retorno
+    result = []
+    for senior in seniors:
+        device = db.query(Device).filter(Device.senior_id == senior.id).first()
+        result.append(
+            {
+                "id": senior.id,
+                "name": senior.name,
+                "birth_date": senior.birth_date,
+                "created_at": senior.created_at,
+                "device_id": device.id if device else None,
+            }
+        )
+    return result
+
+
+@router.post(
+    "/relate_user_senior/", status_code=201, dependencies=[Depends(get_current_user)]
+)
+def relate_user_senior(
+    user_id: str, senior_id: str, db: Session = Depends(get_session)
+):
+    # Verifica se o user existe
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    # Verifica se o senior existe
+    senior = db.query(Senior).filter(Senior.id == senior_id).first()
+    if not senior:
+        raise HTTPException(status_code=404, detail="Senior not found.")
+    # Verifica se já existe relação
+    existing = (
+        db.query(UserSenior)
+        .filter(UserSenior.user_id == user_id, UserSenior.senior_id == senior_id)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Relationship already exists.")
+    relation = UserSenior(user_id=user_id, senior_id=senior_id)
+    db.add(relation)
+    db.commit()
+    return {"message": "User now related to Senior."}
