@@ -13,6 +13,7 @@ class Symptom(SQLModel, table=True):
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, index=True
     )
     senior_id: str = Field(foreign_key="senior.id")
+    name: str
     description: str
     pain_level: int
     created_at: datetime = Field(default_factory=datetime.utcnow)

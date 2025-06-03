@@ -19,3 +19,4 @@ class Senior(SQLModel, table=True):
     symptoms: List["Symptom"] = Relationship(back_populates="senior")
     prescriptions: List["Prescription"] = Relationship(back_populates="senior")
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    device: Optional["Device"] = Relationship(back_populates="senior")

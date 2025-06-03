@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
+    from .dispenser import Dispenser
     from .senior import Senior
 
 
@@ -16,3 +17,4 @@ class Device(SQLModel, table=True):
     status: str
     last_sync: datetime = Field(default_factory=datetime.utcnow)
     senior: Optional["Senior"] = Relationship()
+    dispenser: Optional["Dispenser"] = Relationship(back_populates="device")

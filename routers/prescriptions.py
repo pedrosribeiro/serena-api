@@ -23,21 +23,10 @@ def create_prescription(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    db_prescription = Prescription(
-        user_id=current_user.id, description=prescription.description
+    # Prescription agora está associada a um senior, não user_id
+    raise HTTPException(
+        status_code=400, detail="Prescription must be associated to a senior, not user."
     )
-    db.add(db_prescription)
-    db.commit()
-    db.refresh(db_prescription)
-    # Adiciona medicamentos se houver
-    for med in prescription.medications:
-        db_med = Medication(
-            prescription_id=db_prescription.id, name=med.name, dosage=med.dosage
-        )
-        db.add(db_med)
-    db.commit()
-    db.refresh(db_prescription)
-    return db_prescription
 
 
 @router.get(
@@ -46,7 +35,19 @@ def create_prescription(
 def list_prescriptions(
     db: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
-    return db.query(Prescription).filter(Prescription.user_id == current_user.id).all()
+    # Buscar todos os seniors do usuário
+    from models.usersenior import UserSenior
+
+    senior_ids = [
+        us.senior_id
+        for us in db.query(UserSenior)
+        .filter(UserSenior.user_id == current_user.id)
+        .all()
+    ]
+    prescriptions = (
+        db.query(Prescription).filter(Prescription.senior_id.in_(senior_ids)).all()
+    )
+    return prescriptions
 
 
 @router.get(

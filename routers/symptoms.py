@@ -20,7 +20,22 @@ def create_symptom(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    db_symptom = Symptom(user_id=current_user.id, **symptom.dict())
+    # Exige o senior_id no SymptomCreate
+    if not hasattr(symptom, "senior_id") or not symptom.senior_id:
+        raise HTTPException(
+            status_code=400, detail="senior_id is required to create a symptom."
+        )
+    # Verifica se o senior_id existe
+    from models.senior import Senior
+
+    senior = db.query(Senior).filter(Senior.id == symptom.senior_id).first()
+    if not senior:
+        raise HTTPException(
+            status_code=404, detail="Senior not found for given senior_id."
+        )
+    db_symptom = Symptom(
+        senior_id=symptom.senior_id, **symptom.dict(exclude={"senior_id"})
+    )
     db.add(db_symptom)
     db.commit()
     db.refresh(db_symptom)
@@ -33,7 +48,7 @@ def create_symptom(
 def list_symptoms(
     db: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
-    return db.query(Symptom).filter(Symptom.user_id == current_user.id).all()
+    return db.query(Symptom).all()
 
 
 @router.get(
@@ -128,49 +143,3 @@ def create_symptom_by_device(
     db.commit()
     db.refresh(db_symptom)
     return db_symptom
-
-
-@router.post("/", response_model=SymptomRead)
-def create_symptom(symptom: SymptomCreate, db: Session = Depends(get_session)):
-    db_symptom = Symptom(**symptom.dict())
-    db.add(db_symptom)
-    db.commit()
-    db.refresh(db_symptom)
-    return db_symptom
-
-
-@router.get("/", response_model=List[SymptomRead])
-def list_symptoms(db: Session = Depends(get_session)):
-    return db.query(Symptom).all()
-
-
-@router.get("/{symptom_id}", response_model=SymptomRead)
-def get_symptom(symptom_id: str, db: Session = Depends(get_session)):
-    symptom = db.query(Symptom).filter(Symptom.id == symptom_id).first()
-    if not symptom:
-        raise HTTPException(status_code=404, detail="Symptom not found")
-    return symptom
-
-
-@router.put("/{symptom_id}", response_model=SymptomRead)
-def update_symptom(
-    symptom_id: str, symptom: SymptomCreate, db: Session = Depends(get_session)
-):
-    db_symptom = db.query(Symptom).filter(Symptom.id == symptom_id).first()
-    if not db_symptom:
-        raise HTTPException(status_code=404, detail="Symptom not found")
-    for key, value in symptom.dict().items():
-        setattr(db_symptom, key, value)
-    db.commit()
-    db.refresh(db_symptom)
-    return db_symptom
-
-
-@router.delete("/{symptom_id}", status_code=204)
-def delete_symptom(symptom_id: str, db: Session = Depends(get_session)):
-    symptom = db.query(Symptom).filter(Symptom.id == symptom_id).first()
-    if not symptom:
-        raise HTTPException(status_code=404, detail="Symptom not found")
-    db.delete(symptom)
-    db.commit()
-    return

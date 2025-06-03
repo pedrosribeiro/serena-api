@@ -48,13 +48,7 @@ def create_medication(
 def list_medications(
     db: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
-    # Lista todos os medicamentos das prescrições do usuário
-    return (
-        db.query(Medication)
-        .join("prescription")
-        .filter_by(user_id=current_user.id)
-        .all()
-    )
+    return db.query(Medication).all()
 
 
 @router.get(
@@ -63,7 +57,7 @@ def list_medications(
     dependencies=[Depends(get_current_user)],
 )
 def get_medication(
-    medication_id: int,
+    medication_id: str,  # Corrigido para str
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -75,7 +69,7 @@ def get_medication(
     "/{medication_id}", status_code=204, dependencies=[Depends(get_current_user)]
 )
 def delete_medication(
-    medication_id: int,
+    medication_id: str,  # Corrigido para str
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -91,74 +85,14 @@ def delete_medication(
     dependencies=[Depends(get_current_user)],
 )
 def update_medication(
-    medication_id: int,
+    medication_id: str,  # Corrigido para str
     medication: MedicationCreate,
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
     db_med = get_medication_or_404(db, medication_id, current_user.id)
     db_med.name = medication.name
-    db_med.dosage = medication.dosage
+    db_med.description = medication.description
     db.commit()
     db.refresh(db_med)
     return db_med
-
-
-@router.post(
-    "/", response_model=MedicationRead, dependencies=[Depends(get_current_user)]
-)
-def create_medication(medication: MedicationCreate, db: Session = Depends(get_session)):
-    db_med = Medication(**medication.dict())
-    db.add(db_med)
-    db.commit()
-    db.refresh(db_med)
-    return db_med
-
-
-@router.get(
-    "/", response_model=List[MedicationRead], dependencies=[Depends(get_current_user)]
-)
-def list_medications(db: Session = Depends(get_session)):
-    return db.query(Medication).all()
-
-
-@router.get(
-    "/{medication_id}",
-    response_model=MedicationRead,
-    dependencies=[Depends(get_current_user)],
-)
-def get_medication(medication_id: str, db: Session = Depends(get_session)):
-    med = db.query(Medication).filter(Medication.id == medication_id).first()
-    if not med:
-        raise HTTPException(status_code=404, detail="Medication not found")
-    return med
-
-
-@router.put(
-    "/{medication_id}",
-    response_model=MedicationRead,
-    dependencies=[Depends(get_current_user)],
-)
-def update_medication(
-    medication_id: str, medication: MedicationCreate, db: Session = Depends(get_session)
-):
-    db_med = db.query(Medication).filter(Medication.id == medication_id).first()
-    if not db_med:
-        raise HTTPException(status_code=404, detail="Medication not found")
-    for key, value in medication.dict().items():
-        setattr(db_med, key, value)
-    db.commit()
-    db.refresh(db_med)
-    return db_med
-
-
-@router.delete(
-    "/{medication_id}", status_code=204, dependencies=[Depends(get_current_user)]
-)
-def delete_medication(medication_id: str, db: Session = Depends(get_session)):
-    med = db.query(Medication).filter(Medication.id == medication_id).first()
-    if not med:
-        raise HTTPException(status_code=404, detail="Medication not found")
-    db.delete(med)
-    db.commit()
-    return
