@@ -4,42 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from database import get_session
+from database import get_current_user, get_session
 from models.medication import Medication
 from models.prescription import Prescription
+from models.user import User
 from schemas.prescription import PrescriptionCreate, PrescriptionRead
 from utils.jwt import decode_access_token
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-from database import SessionLocal
 
-# Helper para obter o usuário autenticado
-from models.user import User
-
-
-def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_session)
-):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    payload = decode_access_token(token)
-    if payload is None:
-        raise credentials_exception
-    username: str = payload.get("sub")
-    if username is None:
-        raise credentials_exception
-    user = db.query(User).filter(User.username == username).first()
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-@router.post("/", response_model=PrescriptionRead)
+@router.post(
+    "/", response_model=PrescriptionRead, dependencies=[Depends(get_current_user)]
+)
 def create_prescription(
     prescription: PrescriptionCreate,
     db: Session = Depends(get_session),
@@ -62,14 +40,20 @@ def create_prescription(
     return db_prescription
 
 
-@router.get("/", response_model=List[PrescriptionRead])
+@router.get(
+    "/", response_model=List[PrescriptionRead], dependencies=[Depends(get_current_user)]
+)
 def list_prescriptions(
     db: Session = Depends(get_session), current_user: User = Depends(get_current_user)
 ):
     return db.query(Prescription).filter(Prescription.user_id == current_user.id).all()
 
 
-@router.get("/{prescription_id}", response_model=PrescriptionRead)
+@router.get(
+    "/{prescription_id}",
+    response_model=PrescriptionRead,
+    dependencies=[Depends(get_current_user)],
+)
 def get_prescription(
     prescription_id: int,
     db: Session = Depends(get_session),
@@ -87,7 +71,9 @@ def get_prescription(
     return prescription
 
 
-@router.delete("/{prescription_id}", status_code=204)
+@router.delete(
+    "/{prescription_id}", status_code=204, dependencies=[Depends(get_current_user)]
+)
 def delete_prescription(
     prescription_id: int,
     db: Session = Depends(get_session),
@@ -107,7 +93,11 @@ def delete_prescription(
     return
 
 
-@router.put("/{prescription_id}", response_model=PrescriptionRead)
+@router.put(
+    "/{prescription_id}",
+    response_model=PrescriptionRead,
+    dependencies=[Depends(get_current_user)],
+)
 def update_prescription(
     prescription_id: int,
     prescription: PrescriptionCreate,
@@ -127,3 +117,38 @@ def update_prescription(
     db.commit()
     db.refresh(db_prescription)
     return db_prescription
+
+
+@router.get("/by_device/{device_id}", dependencies=[Depends(get_current_user)])
+def get_valid_prescriptions_by_device(
+    device_id: str, db: Session = Depends(get_session)
+):
+    from datetime import date
+
+    from models.device import Device
+    from models.prescription import Prescription
+    from models.senior import Senior
+
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    senior = device.senior
+    if not senior:
+        raise HTTPException(status_code=404, detail="Senior not found")
+    today = date.today()
+    prescriptions = (
+        db.query(Prescription)
+        .filter(Prescription.senior_id == senior.id, Prescription.end_date >= today)
+        .all()
+    )
+    return prescriptions
+
+
+@router.get("/by_senior/{senior_id}", dependencies=[Depends(get_current_user)])
+def get_prescriptions_by_senior(senior_id: str, db: Session = Depends(get_session)):
+    from models.prescription import Prescription
+
+    prescriptions = (
+        db.query(Prescription).filter(Prescription.senior_id == senior_id).all()
+    )
+    return prescriptions

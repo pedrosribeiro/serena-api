@@ -1,1 +1,10 @@
-# This file makes the models directory a package.
+from .compartment import Compartment
+from .device import Device
+from .dispenser import Dispenser
+from .medication import Medication
+from .prescription import Prescription
+from .report import Report
+from .senior import Senior
+from .symptom import Symptom
+from .user import User
+from .usersenior import UserSenior

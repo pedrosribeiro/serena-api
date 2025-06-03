@@ -7,7 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Import your routers and database setup here
 from database import create_db_and_tables
-from routers import medications, prescriptions, reports, symptoms
+from routers import (
+    dispenser,
+    medications,
+    prescriptions,
+    reports,
+    senior,
+    symptoms,
+    users,
+)
 from routers.auth import router as auth_router
 
 load_dotenv()
@@ -34,6 +42,9 @@ app.include_router(medications, prefix="/medications", tags=["medications"])
 app.include_router(symptoms, prefix="/symptoms", tags=["symptoms"])
 app.include_router(reports, prefix="/reports", tags=["reports"])
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(users, prefix="/users", tags=["users"])
+app.include_router(senior, prefix="/senior", tags=["senior"])
+app.include_router(dispenser, prefix="/dispenser", tags=["dispenser"])
 
 if __name__ == "__main__":
     import uvicorn
