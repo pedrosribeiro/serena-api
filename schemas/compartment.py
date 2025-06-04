@@ -19,3 +19,4 @@ class CompartmentRead(CompartmentBase):
 
 class CompartmentUpdate(BaseModel):
     quantity: int
+    medication_id: str

@@ -24,7 +24,7 @@ class PrescriptionCreate(PrescriptionBase):
 class PrescriptionRead(PrescriptionBase):
     id: str
     medication: MedicationRead
-    doctor: Optional[dict] = None  # Novo campo para informações do doutor
+    doctor: Optional[dict] = None
 
     @validator("start_date", pre=True, always=True)
     def serialize_start_date(cls, v):

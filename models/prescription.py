@@ -15,7 +15,7 @@ class Prescription(SQLModel, table=True):
     )
     senior_id: str = Field(foreign_key="senior.id")
     medication_id: str = Field(foreign_key="medication.id")
-    doctor_id: str = Field(foreign_key="user.id")  # novo campo obrigatório
+    doctor_id: str = Field(foreign_key="user.id")
     description: str
     dosage: str
     frequency: str

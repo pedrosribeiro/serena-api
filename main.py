@@ -17,6 +17,8 @@ from routers import (
     users,
 )
 from routers.auth import router as auth_router
+from routers.compartment import router as compartment_router
+from routers.device import router as device_router
 
 load_dotenv()
 
@@ -44,7 +46,9 @@ app.include_router(reports, prefix="/reports", tags=["reports"])
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(users, prefix="/users", tags=["users"])
 app.include_router(senior, prefix="/senior", tags=["senior"])
+app.include_router(device_router, prefix="/device", tags=["device"])
 app.include_router(dispenser, prefix="/dispenser", tags=["dispenser"])
+app.include_router(compartment_router, prefix="/compartment", tags=["compartment"])
 
 if __name__ == "__main__":
     import uvicorn
