@@ -134,7 +134,7 @@ def list_prescriptions(
     dependencies=[Depends(get_current_user)],
 )
 def get_prescription(
-    prescription_id: int,
+    prescription_id: str,
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -154,7 +154,7 @@ def get_prescription(
     "/{prescription_id}", status_code=204, dependencies=[Depends(get_current_user)]
 )
 def delete_prescription(
-    prescription_id: int,
+    prescription_id: str,
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -178,7 +178,7 @@ def delete_prescription(
     dependencies=[Depends(get_current_user)],
 )
 def update_prescription(
-    prescription_id: int,
+    prescription_id: str,
     prescription: PrescriptionCreate,
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
