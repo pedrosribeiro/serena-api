@@ -92,8 +92,6 @@ def create_db_and_tables():
             session.add(doctor)
             session.commit()
             session.refresh(doctor)
-        # Caregiver
-        caregiver = session.query(User).filter(User.email == "admin@serena.com").first()
         # Senior
         senior = session.query(Senior).filter(Senior.name == "Paciente Exemplo").first()
         if not senior:
@@ -105,6 +103,17 @@ def create_db_and_tables():
             session.add(senior)
             session.commit()
             session.refresh(senior)
+        # UserSenior - Doctor
+        if (
+            not session.query(UserSenior)
+            .filter(UserSenior.user_id == doctor.id, UserSenior.senior_id == senior.id)
+            .first()
+        ):
+            usersenior_doctor = UserSenior(user_id=doctor.id, senior_id=senior.id)
+            session.add(usersenior_doctor)
+            session.commit()
+        # Caregiver
+        caregiver = session.query(User).filter(User.email == "admin@serena.com").first()
         # Device
         device = session.query(Device).filter(Device.senior_id == senior.id).first()
         if not device:
