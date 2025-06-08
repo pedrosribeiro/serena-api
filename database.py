@@ -109,7 +109,7 @@ def create_db_and_tables():
         device = session.query(Device).filter(Device.senior_id == senior.id).first()
         if not device:
             device = Device(
-                id=str(uuid.uuid4()),
+                id="0",
                 senior_id=senior.id,
                 status="active",
                 last_sync=datetime.utcnow(),
