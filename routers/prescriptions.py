@@ -139,11 +139,7 @@ def get_prescription(
     current_user: User = Depends(get_current_user),
 ):
     prescription = (
-        db.query(Prescription)
-        .filter(
-            Prescription.id == prescription_id, Prescription.user_id == current_user.id
-        )
-        .first()
+        db.query(Prescription).filter(Prescription.id == prescription_id).first()
     )
     if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
@@ -159,11 +155,7 @@ def delete_prescription(
     current_user: User = Depends(get_current_user),
 ):
     prescription = (
-        db.query(Prescription)
-        .filter(
-            Prescription.id == prescription_id, Prescription.user_id == current_user.id
-        )
-        .first()
+        db.query(Prescription).filter(Prescription.id == prescription_id).first()
     )
     if not prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
@@ -184,18 +176,51 @@ def update_prescription(
     current_user: User = Depends(get_current_user),
 ):
     db_prescription = (
-        db.query(Prescription)
-        .filter(
-            Prescription.id == prescription_id, Prescription.user_id == current_user.id
-        )
-        .first()
+        db.query(Prescription).filter(Prescription.id == prescription_id).first()
     )
     if not db_prescription:
         raise HTTPException(status_code=404, detail="Prescription not found")
+    db_prescription.senior_id = prescription.senior_id
+    db_prescription.medication_id = prescription.medication_id
+    db_prescription.doctor_id = prescription.doctor_id
+    db_prescription.dosage = prescription.dosage
+    db_prescription.frequency = prescription.frequency
+    db_prescription.start_date = (
+        prescription.start_date
+        if isinstance(prescription.start_date, datetime)
+        else datetime.fromisoformat(prescription.start_date)
+    )
+    db_prescription.end_date = (
+        prescription.end_date
+        if isinstance(prescription.end_date, datetime)
+        else datetime.fromisoformat(prescription.end_date)
+    )
     db_prescription.description = prescription.description
     db.commit()
     db.refresh(db_prescription)
-    return db_prescription
+    # Monta resposta com medication e doctor
+    med = (
+        db.query(Medication)
+        .filter(Medication.id == db_prescription.medication_id)
+        .first()
+    )
+    medication_data = None
+    if med:
+        medication_data = {
+            "id": med.id,
+            "name": med.name,
+            "description": med.description,
+        }
+    doctor = db.query(User).filter(User.id == db_prescription.doctor_id).first()
+    doctor_data = None
+    if doctor:
+        doctor_data = {"id": doctor.id, "name": doctor.name}
+    presc_data = {
+        **db_prescription.__dict__,
+        "medication": medication_data,
+        "doctor": doctor_data,
+    }
+    return PrescriptionRead(**presc_data)
 
 
 @router.get("/by_device/{device_id}", dependencies=[Depends(get_current_user)])
