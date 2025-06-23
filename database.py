@@ -84,7 +84,7 @@ def create_db_and_tables():
         doctor = session.query(User).filter(User.email == "doctor@serena.com").first()
         if not doctor:
             doctor = User(
-                name="Dr. House",
+                name="Dr. Serena",
                 email="doctor@serena.com",
                 password=pwd_context.hash("doctor123"),
                 role="doctor",
