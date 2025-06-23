@@ -95,7 +95,9 @@ def create_db_and_tables():
         # Senior
         senior = session.query(Senior).filter(Senior.name == "Paciente Exemplo").first()
         if not senior:
+            cpf_exemplo = "12345678901"  # CPF de exemplo, 11 dígitos
             senior = Senior(
+                id=cpf_exemplo,
                 name="Paciente Exemplo",
                 birth_date="01/01/1950",
                 created_at=datetime.utcnow().isoformat(),

@@ -24,7 +24,7 @@ def get_senior_by_device(device_id: str, db: Session = Depends(get_session)):
     senior = device.senior
     if not senior:
         raise HTTPException(status_code=404, detail="Senior not found")
-    return {"senior_id": senior.id}
+    return {"senior_id": senior.id}  # CPF
 
 
 @router.post(
@@ -38,6 +38,13 @@ def create_senior(
     db: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    # Verifica se já existe um Senior com o mesmo CPF
+    existing_senior = db.query(Senior).filter(Senior.id == senior.id).first()
+    if existing_senior:
+        raise HTTPException(
+            status_code=400, detail="Já existe um idoso cadastrado com este CPF."
+        )
+
     # Verifica se o device_id já está associado a outro Senior
     existing_device = db.query(Device).filter(Device.id == senior.device_id).first()
     if existing_device:
@@ -45,8 +52,9 @@ def create_senior(
             status_code=400, detail="Device ID already assigned to another Senior."
         )
 
-    # Cria o Senior
+    # Cria o Senior com CPF como id
     db_senior = Senior(
+        id=senior.id,
         name=senior.name,
         birth_date=senior.birth_date,
         created_at=datetime.utcnow().isoformat(),

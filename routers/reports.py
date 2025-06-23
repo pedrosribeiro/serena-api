@@ -24,7 +24,7 @@ router = APIRouter()
 
 @router.get("/report/{senior_id}", dependencies=[Depends(get_current_user)])
 def get_consolidated_report(senior_id: str, db: Session = Depends(get_session)):
-    # Busca o idoso
+    # Busca o idoso pelo CPF
     senior = db.query(Senior).filter(Senior.id == senior_id).first()
     if not senior:
         raise HTTPException(status_code=404, detail="Senior not found")

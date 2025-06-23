@@ -1,4 +1,4 @@
-import uuid
+import re
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
@@ -11,9 +11,7 @@ if TYPE_CHECKING:
 
 
 class Senior(SQLModel, table=True):
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True, index=True
-    )
+    id: str = Field(primary_key=True, index=True, regex=r"^\d{11}$")
     name: str
     birth_date: str = Field()
     symptoms: List["Symptom"] = Relationship(back_populates="senior")
