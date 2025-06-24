@@ -138,7 +138,7 @@ def create_symptom_by_device(
     senior = device.senior
     if not senior:
         raise HTTPException(status_code=404, detail="Senior not found")
-    db_symptom = Symptom(senior_id=senior.id, **symptom.dict())
+    db_symptom = Symptom(senior_id=senior.id, **symptom.dict(exclude={"senior_id"}))
     db.add(db_symptom)
     db.commit()
     db.refresh(db_symptom)
